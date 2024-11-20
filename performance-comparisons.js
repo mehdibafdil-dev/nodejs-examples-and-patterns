@@ -1,4 +1,3 @@
-```javascript
 /**
  * # Performance Comparisons of Async/Await in Node.js
  *
@@ -28,6 +27,7 @@ async function processUsersSequentially(users) {
  * ## Correct Approach: Concurrent Processing
  * To improve performance, you can use `Promise.all()` to run multiple operations concurrently.
  * This allows all operations to be initiated at once, significantly reducing the total processing time.
+
 ### Optimizing Node.js Performance with Async/Await
 
 #### Introduction
@@ -38,7 +38,8 @@ In this tutorial, we'll explore the hidden cost of unnecessary `async/await` usa
 #### The Hidden Cost of Unnecessary Async/Await
 Let's start with a common example I recently found in a production codebase:
 
-```javascript
+*/
+
 async function processUsers(users) {
   for (const user of users) {
     await processUser(user);
@@ -46,30 +47,28 @@ async function processUsers(users) {
 }
 
 async function processUser(user) {
-  // Some processing logic
   await new Promise(resolve => setTimeout(resolve, 100));
 }
-```
 
-This code looks innocent enough, but it's potentially destroying your application's throughput.
+/**
+ * This code looks innocent enough, but it's potentially destroying your application's throughput.
 
 **The Problem Explained**
 When using `await` in a `for` loop, we're forcing Node.js to process users sequentially. Each iteration waits for the previous one to complete before starting the next. If you're processing 1,000 users, and each operation takes 100ms, you're looking at a total processing time of 100 seconds!
 
 #### The Better Approach
 Here's how you should be handling it:
+*/
 
-```javascript
 async function processUsers(users) {
   await Promise.all(users.map(user => processUser(user)));
 }
 
 async function processUser(user) {
-  // Some processing logic
   await new Promise(resolve => setTimeout(resolve, 100));
 }
-```
 
+/**
 This simple change allows all operations to run concurrently. The same 1,000 users could now be processed in just 100ms (assuming your system can handle the concurrent load).
 
 **Real-World Performance Impact**
@@ -127,3 +126,4 @@ Remember, just because code works doesn't mean it works efficiently. Take the ti
 By following the best practices outlined in this tutorial, you can significantly improve your Node.js application's performance and avoid the common pitfalls of `async/await` misuse.
 
 Happy coding! 🚀
+*/
