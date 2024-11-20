@@ -1,129 +1,191 @@
 /**
- * # Performance Comparisons of Async/Await in Node.js
- *
- * This file demonstrates the performance differences between using async/await incorrectly
- * and correctly in Node.js applications. Understanding these differences is crucial for
- * optimizing your application's performance, especially when dealing with I/O-bound operations.
- *
- * ## Overview
- * The async/await syntax in JavaScript allows for writing asynchronous code that looks
- * synchronous, making it easier to read and maintain. However, improper use can lead to
- * significant performance bottlenecks.
- *
- * ## Common Mistake: Sequential Processing
- * One of the most common mistakes is using `await` inside a loop. This forces the operations
- * to run sequentially, which can drastically increase the total processing time.
- *
- * ### Example of Incorrect Usage
+ * performance-comparisons.js
+ * 
+ * This file demonstrates various patterns and anti-patterns for async/await usage in Node.js,
+ * along with their performance implications.
+ * 
+ * Author: MEHDI BAFDIL
+ * GitHub: [@mehdibafdil](https://github.com/mehdibafdil-dev)
+ * Email: mehdibafdil@gmail.com
+ * 
+ * To run this file:
+ * node performance-comparisons.js
  */
 
+'use strict';
+
+// Utility function to simulate an API call or database operation
+const simulateDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Helper function to measure execution time of async operations
+ * @param {Function} fn - The async function to measure
+ * @param {string} label - Label for the console output
+ */
+async function measureExecutionTime(fn, label) {
+    const start = Date.now();
+    await fn();
+    const end = Date.now();
+    console.log(`${label}: ${end - start}ms`);
+}
+
+/**
+ * ❌ ANTI-PATTERN: Sequential Processing
+ * This function demonstrates the common mistake of using async/await in a loop,
+ * which processes items sequentially and results in poor performance.
+ */
 async function processUsersSequentially(users) {
+    console.log('\n--- Sequential Processing Started ---');
     for (const user of users) {
-        await processUser(user); // This waits for each user to be processed one at a time
+        await processUser(user); // ❌ This creates a blocking operation
+    }
+    console.log('--- Sequential Processing Completed ---\n');
+}
+
+/**
+ * ✅ BEST PRACTICE: Concurrent Processing
+ * This function demonstrates the correct way to process items concurrently
+ * using Promise.all()
+ */
+async function processUsersConcurrently(users) {
+    console.log('\n--- Concurrent Processing Started ---');
+    await Promise.all(users.map(user => processUser(user))); // ✅ All operations run in parallel
+    console.log('--- Concurrent Processing Completed ---\n');
+}
+
+/**
+ * ✅ BEST PRACTICE: Controlled Concurrent Processing
+ * This function demonstrates how to process items in controlled batches
+ * to prevent overwhelming system resources
+ * @param {Array} users - Array of users to process
+ * @param {number} batchSize - Number of concurrent operations to run
+ */
+async function processUsersInBatches(users, batchSize = 5) {
+    console.log('\n--- Batch Processing Started ---');
+    for (let i = 0; i < users.length; i += batchSize) {
+        const batch = users.slice(i, i + batchSize);
+        await Promise.all(batch.map(user => processUser(user)));
+        console.log(`Completed batch of ${batch.length} users`);
+    }
+    console.log('--- Batch Processing Completed ---\n');
+}
+
+/**
+ * Simulates processing a single user
+ * @param {Object} user - User object to process
+ * @returns {Promise}
+ */
+async function processUser(user) {
+    try {
+        await simulateDelay(100); // Simulate a 100ms API call or DB operation
+        return { success: true, user };
+    } catch (error) {
+        console.error(`Error processing user ${user}:`, error);
+        throw error;
     }
 }
 
 /**
- * ## Correct Approach: Concurrent Processing
- * To improve performance, you can use `Promise.all()` to run multiple operations concurrently.
- * This allows all operations to be initiated at once, significantly reducing the total processing time.
-
-### Optimizing Node.js Performance with Async/Await
-
-#### Introduction
-As a full-stack developer, I've encountered numerous performance issues in Node.js applications. One common mistake I've seen repeatedly is the misuse of `async/await`. This simple oversight can significantly impact your application's throughput without you even realizing it.
-
-In this tutorial, we'll explore the hidden cost of unnecessary `async/await` usage and learn how to optimize your Node.js code for better performance.
-
-#### The Hidden Cost of Unnecessary Async/Await
-Let's start with a common example I recently found in a production codebase:
-
-*/
-
-async function processUsers(users) {
-  for (const user of users) {
-    await processUser(user);
-  }
-}
-
-async function processUser(user) {
-  await new Promise(resolve => setTimeout(resolve, 100));
+ * Error handling demonstration with concurrent operations
+ */
+async function demonstrateErrorHandling(users) {
+    try {
+        console.log('\n--- Error Handling Demonstration ---');
+        const results = await Promise.allSettled(
+            users.map(user => processUser(user))
+        );
+        
+        // Process results
+        const succeeded = results.filter(r => r.status === 'fulfilled');
+        const failed = results.filter(r => r.status === 'rejected');
+        
+        console.log(`Succeeded: ${succeeded.length}, Failed: ${failed.length}`);
+        console.log('--- Error Handling Demonstration Completed ---\n');
+    } catch (error) {
+        console.error('Error in batch processing:', error);
+    }
 }
 
 /**
- * This code looks innocent enough, but it's potentially destroying your application's throughput.
+ * Real-world example: Processing API requests
+ */
+async function demonstrateApiRequests() {
+    const endpoints = [
+        'https://api.example.com/users',
+        'https://api.example.com/posts',
+        'https://api.example.com/comments'
+    ];
 
-**The Problem Explained**
-When using `await` in a `for` loop, we're forcing Node.js to process users sequentially. Each iteration waits for the previous one to complete before starting the next. If you're processing 1,000 users, and each operation takes 100ms, you're looking at a total processing time of 100 seconds!
+    // ❌ Bad approach: Sequential requests
+    console.log('\n--- Sequential API Requests ---');
+    for (const endpoint of endpoints) {
+        // await fetch(endpoint); // Commented out as this is just for demonstration
+        await simulateDelay(100);
+    }
 
-#### The Better Approach
-Here's how you should be handling it:
-*/
-
-async function processUsers(users) {
-  await Promise.all(users.map(user => processUser(user)));
-}
-
-async function processUser(user) {
-  await new Promise(resolve => setTimeout(resolve, 100));
+    // ✅ Good approach: Parallel requests
+    console.log('\n--- Parallel API Requests ---');
+    await Promise.all(endpoints.map(endpoint => {
+        // return fetch(endpoint); // Commented out as this is just for demonstration
+        return simulateDelay(100);
+    }));
 }
 
 /**
-This simple change allows all operations to run concurrently. The same 1,000 users could now be processed in just 100ms (assuming your system can handle the concurrent load).
+ * Main execution function to run all demonstrations
+ */
+async function runDemonstrations() {
+    // Create test data
+    const users = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: `User ${i + 1}` }));
 
-**Real-World Performance Impact**
-In a recent project, I found this exact issue in a critical API endpoint. Here are the before and after metrics:
+    console.log('Starting Performance Comparisons Demo\n');
 
-**Before**: 12 seconds average response time
-**After**: 800ms average response time
-**Performance improvement**: 93%
+    // Demonstrate sequential vs concurrent processing
+    await measureExecutionTime(
+        () => processUsersSequentially(users),
+        'Sequential Processing Time'
+    );
 
-#### Common Scenarios Where This Matters
-This optimization can have a significant impact in various scenarios, such as:
+    await measureExecutionTime(
+        () => processUsersConcurrently(users),
+        'Concurrent Processing Time'
+    );
 
-**API Requests**: When fetching data from multiple endpoints
-**Database Operations**: Parallel database queries
-**File System Operations**: Reading multiple files
-**External Service Calls**: Multiple microservice interactions
+    await measureExecutionTime(
+        () => processUsersInBatches(users, 5),
+        'Batch Processing Time'
+    );
 
-#### Best Practices for Async/Await
-Here are some best practices to keep in mind when using `async/await` in your Node.js applications:
+    // Demonstrate error handling
+    await demonstrateErrorHandling(users);
 
-1. **Use `Promise.all()` When Possible**
-   - When you have multiple asynchronous operations that can run concurrently, use `Promise.all()` to execute them in parallel.
+    // Demonstrate API requests
+    await demonstrateApiRequests();
 
-2. **Control Concurrency When Needed**
-   - If you're dealing with a large number of concurrent operations, you may need to implement some form of concurrency control to avoid overloading your system.
+    console.log('\n Performance Comparisons Demo Completed');
+}
 
-3. **Handle Errors Properly**
-   - Make sure to properly handle errors in your `async/await` code to avoid unhandled promise rejections and other issues.
+// Execute all demonstrations
+runDemonstrations().catch(console.error);
 
-#### When to Still Use Sequential Processing
-There are legitimate cases where sequential processing is necessary:
-
-- **When operations must happen in order**
-- **When dealing with rate limits**
-- **When managing system resources**
-- **When maintaining data consistency is crucial**
-
-#### Performance Monitoring Tips
-To identify performance issues related to `async/await` in your codebase, consider the following:
-
-- **Use Node.js profiler**: Utilize built-in profiling tools to identify performance bottlenecks.
-- **Implement performance monitoring**: Use tools like New Relic, Datadog, or similar to track and analyze your application's performance.
-- **Log execution times**: Log the execution times for critical operations to identify slow-running code.
-- **Use `async_hooks`**: Leverage the `async_hooks` module to track asynchronous operations and their performance.
-
-#### Conclusion
-The `async/await` syntax is powerful, but with great power comes great responsibility. Before using `await`, always ask yourself:
-
-- **Do these operations need to be sequential?**
-- **Could these run in parallel?**
-- **What's the performance impact?**
-
-Remember, just because code works doesn't mean it works efficiently. Take the time to understand your asynchronous operations and optimize them accordingly.
-
-By following the best practices outlined in this tutorial, you can significantly improve your Node.js application's performance and avoid the common pitfalls of `async/await` misuse.
-
-Happy coding! 🚀
-*/
+/**
+ * Additional Notes:
+ * 
+ * 1. Memory Considerations:
+ *    - When dealing with large datasets, consider using streams or batch processing
+ *    - Monitor memory usage when running many concurrent operations
+ * 
+ * 2. Error Handling Best Practices:
+ *    - Always use try/catch blocks with async/await
+ *    - Consider using Promise.allSettled() instead of Promise.all() when appropriate
+ * 
+ * 3. Performance Monitoring:
+ *    - Use console.time() and console.timeEnd() for basic timing
+ *    - Consider using performance hooks for more detailed metrics
+ *    - Implement proper logging in production environments
+ * 
+ * 4. System Resources:
+ *    - Be mindful of system limitations (CPU, memory, network)
+ *    - Adjust batch sizes based on your system's capabilities
+ *    - Monitor resource usage in production
+ */
