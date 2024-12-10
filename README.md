@@ -24,7 +24,7 @@ To explore the examples in this repository, follow these steps:
 3. **Run the examples**:
    Execute the example file directly using Node.js. For instance:
    ```bash
-   node examples/performance-comparisons.js
+   node performance-comparisons.js
    ```
 
 ## Key Examples
