@@ -12,7 +12,7 @@ To explore the examples in this repository, follow these steps:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/nodejs-performance-optimization.git
+   git clone https://github.com/mehdibafdil-dev/nodejs-performance-optimization.git
    cd nodejs-performance-optimization
    ```
 
@@ -22,9 +22,9 @@ To explore the examples in this repository, follow these steps:
    ```
 
 3. **Run the examples**:
-   Execute the example files directly using Node.js. For instance:
+   Execute the example file directly using Node.js. For instance:
    ```bash
-   node examples/performance-comparisons.js
+   node performance-comparisons.js
    ```
 
 ## Key Examples
